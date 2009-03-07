@@ -24,7 +24,7 @@
 
 (defn integers
   ([] (integers 1))
-  ([n] (lazy-cons n (integers (inc n)))))
+  ([n] (lazy-seq (cons n (integers (inc n))))))
 
 (defmacro simple-tests [prefix & body]
   (cons 'do 
