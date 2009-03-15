@@ -6,17 +6,34 @@
 
   <!-- The JAR file to create. -->
   <property name="jarfile" location="unit-test.jar"/>
+  <property name="build" location="classes"/>
+	<property name="clojure-jar" location="../clojure/clojure.jar"/>
+
+  <target name="init">
+    <mkdir dir="${build}"/>
+  </target>
 
   <target name="clean"
           description="Remove generated files and directories.">
     <delete file="${jarfile}"/>
+		<delete dir="${build}"/>
   </target>
 
-  <target name="jar"
+	<target name="compile_classes" depends="init"
+					description="Compile clojure classes.">
+		<java classname="clojure.lang.Compile"
+          classpath=".:${build}:${clojure-jar}">
+      <sysproperty key="clojure.compile.path" value="${build}"/>
+      <arg value="unit-test.run-tests"/>
+		</java>
+  </target>
+
+  <target name="jar" depends="compile_classes"
           description="Create jar file.">
     <jar jarfile="${jarfile}">
       <fileset dir="." includes="CPL.TXT"/>
       <fileset dir="." includes="**/*.clj"/>
+      <fileset dir="classes" includes="**/*.class"/>
     </jar>
   </target>
 
