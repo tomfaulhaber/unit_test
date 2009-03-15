@@ -34,6 +34,8 @@
 		    (assert-equal ~expected-result ~statement)))
 	       pairs (integers)))))
 
+(def #^{:private true} tst-print print)
+(def #^{:private true} tst-println println)
 
 (defstruct #^{:doc "Stores the tests executed; failures and
   errors are lists of throwables."}
@@ -198,11 +200,11 @@
   "Shows a stack trace that has been filtered to hopefully show only the useful information."
   [failures]
   (let [f (fn [[name failure] n]
-            (println (str (inc n) ") " name ": " \newline) 
+            (tst-println (str (inc n) ") " name ": " \newline) 
                      (if (instance? java.lang.AssertionError failure)
                        (. failure getMessage)
                        (. failure toString)))
-            (doall (map (comp (partial println "   ") (memfn toString))
+            (doall (map (comp (partial tst-println "   ") (memfn toString))
 			(filter-stacktrace failure))))]
     (doall (map f failures (range (count failures))))
     ))
@@ -214,14 +216,14 @@
         failures (:failures tresult)
         errors (:errors tresult)]
     (newline)
-    (println "Tests run" (count tests) 
+    (tst-println "Tests run" (count tests) 
              "failures" (count failures) 
              "errors" (count errors))
     (when (> (count failures) 0)
-      (println "Failures:")
+      (tst-println "Failures:")
       (show-stacktraces (reverse failures)))
     (when (> (count errors) 0)
-      (println "Errors:")
+      (tst-println "Errors:")
       (show-stacktraces (reverse errors)))
     ))
 
@@ -231,15 +233,15 @@ or a new test-result."
   ([test] (run-test test (init-test-result)))
   ([test test-result]
      (let [r (try 
-              (do (print ".")
+              (do (tst-print ".")
                   (test)
                   test-result)
               (catch java.lang.AssertionError a
-                (print "F")
+                (tst-print "F")
                 (assoc-append test-result :failures [(:name (meta test)) a])
                 )
               (catch Throwable t
-                (print "E")
+                (tst-print "E")
                 (assoc-append test-result :errors [(:name (meta test)) t])
                 )
               )]
@@ -272,6 +274,18 @@ or a new test-result."
   "Runs the tests and returns the test result without any printing."
   ([] (exec-tests (all-tests)))
   ([tests] 
-     (binding [print (fn [& x])]
+     (binding [tst-print (fn [& x])
+	       tst-println (fn [& x])]
        (reduce #(run-test %2 %1) (init-test-result) tests)
        )))
+
+(defn exec-all-tests 
+  "Runs all the tests in the given or current namespace and returns the test result 
+without any printing."
+  ([] (exec-all-tests (ns-name *ns*)))
+  ([ns-sym] (exec-tests (all-tests ns-sym)))
+  ([ns-sym pattern] 
+     (exec-tests 
+      (filter 
+       (comp (partial re-find pattern) name :name meta) 
+       (all-tests ns-sym)))))
